@@ -10,6 +10,7 @@ from serializers.auth import userdb_serializer
 from utils.jwt import authenticate_user, ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token, get_user_by_username, \
     get_user_by_email, get_password_hash, oauth2_scheme, SECRET_KEY, ALGORITHM
 
+
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 db = get_db()
 
