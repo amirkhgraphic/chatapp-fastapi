@@ -1,28 +1,24 @@
-from typing import List
-
-from pydantic import BaseModel, PastDatetime, FileUrl
-
-from models.auth import UserDB
+from utils.models import MyBaseModel
 
 
-class PrivateChat(BaseModel):
-    user1: str
-    user2: str
-
-
-class GroupChat(BaseModel):
-    group_name: str
-    members: List[UserDB]
-
-
-class Message(BaseModel):
-    sender: UserDB
-    chat: PrivateChat | GroupChat
-    caption: str
-    created_at: PastDatetime
-
-
-class Attachment(BaseModel):
+class Attachment(MyBaseModel):
     type: str
-    file: FileUrl
-    message: Message
+    file: str
+
+
+class Message(MyBaseModel):
+    sender_id: str  # username field
+    caption: str
+    attachments: list[Attachment] = []
+
+
+class PrivateChat(MyBaseModel):
+    user_ids: list[str]  # username field
+    messages: list[Message] = []
+
+
+class GroupChat(MyBaseModel):
+    group_name: str
+    member_ids: list[str]  # username field
+    messages: list[Message] = []
+

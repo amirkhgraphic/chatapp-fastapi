@@ -1,7 +1,9 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import EmailStr, BaseModel
+
+from utils.models import MyBaseModel
 
 
-class User(BaseModel):
+class User(MyBaseModel):
     username: str
     email: EmailStr
     is_active: bool = False

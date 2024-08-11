@@ -77,7 +77,6 @@ async def read_users_me(current_user: Annotated[User, Depends(get_current_active
 @router.get("/activate", response_model=User)
 async def activate_user(current_user: dict = Depends(get_current_user)) -> dict | None:
     current_user["is_active"] = True
-    db.update_one("users", {"username": current_user["username"]}, current_user)
+    db.update_one("users", {"username": current_user["username"]}, "set", current_user)
 
     return current_user
-

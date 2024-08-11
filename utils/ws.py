@@ -1,5 +1,7 @@
 from fastapi import WebSocket
 
+from models.chat import Message
+
 
 class ConnectionManager:
     def __init__(self):
@@ -10,21 +12,16 @@ class ConnectionManager:
         self.active_connections[username] = websocket
         print("accept handshake:", username)
 
-    def disconnect(self, username):
-        self.active_connections.pop(username)
+    async def disconnect(self, username):
+        await self.active_connections.pop(username).close()
         print(username, "disconnected.")
 
-    async def send_message(self, message: str, receiver: str, message_type: str):
-        if receiver in self.active_connections:
+    async def send_message(self, message: Message, receivers: list[str], chat_id: str):
+        receivers = filter(lambda x: x in self.active_connections, receivers)
+        for receiver in receivers:
             await self.active_connections[receiver].send_json({
-                "message": message,
-                "type": message_type
+                "sender": message.sender_id,
+                "caption": message.caption,
+                "attachments": message.attachments,
+                "chat_id": chat_id,
             })
-
-    async def send_private_message(self, message: str, user1: str, user2: str):
-        await self.send_message(message, user1, "private")
-        await self.send_message(message, user2, "private")
-
-    async def send_group_message(self, message: str, group_members: list[str]):
-        for member in group_members:
-            await self.send_message(message, member, "group")

@@ -26,9 +26,13 @@ class MongoDBManager:
         collection = self.get_collection(collection_name)
         return collection.find_one(query)
 
-    def update_one(self, collection_name: str, query: dict, update: dict) -> None:
+    def find_all(self, collection_name: str, query: dict) -> dict:
         collection = self.get_collection(collection_name)
-        collection.update_one(query, {'$set': update})
+        return collection.find(query)
+
+    def update_one(self, collection_name: str, query: dict, operation: str, update: dict) -> None:
+        collection = self.get_collection(collection_name)
+        collection.update_one(query, {f'${operation}': update})
 
     def delete_one(self, collection_name: str, query: dict) -> None:
         collection = self.get_collection(collection_name)
