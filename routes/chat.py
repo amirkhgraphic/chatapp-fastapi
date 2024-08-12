@@ -2,19 +2,16 @@ import json
 from bson import ObjectId
 from typing import Annotated
 
-from fastapi import (APIRouter, Depends, WebSocket, WebSocketDisconnect, status, HTTPException, Response,
-                     WebSocketException)
+from fastapi import APIRouter, Depends, status, HTTPException, Response
 
-from serializers.chat import private_chat_serializer, dict_group_chat_serializer, dict_private_chat_serializer
+from serializers import dict_group_chat_serializer, dict_private_chat_serializer
 from utils.jwt import get_current_active_user
-from utils.ws import ConnectionManager
-from models.chat import PrivateChat, GroupChat, Message, Attachment
+from models.chat import PrivateChat, GroupChat
 from models.auth import User
 from database import get_db
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
 db = get_db()
-manager = ConnectionManager()
 
 
 @router.post("/private_chat/create")
@@ -86,7 +83,7 @@ async def get_private_chat(
     if current_user["username"] not in chat.get("user_ids", []):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="You don't have access to this chat")
 
-    return Response(status_code=status.HTTP_200_OK, content=json.dumps(private_chat_serializer(chat)))
+    return Response(status_code=status.HTTP_200_OK, content=json.dumps(dict_private_chat_serializer(chat)))
 
 
 @router.get("/group_chat/get/{chat_id}")
@@ -118,49 +115,3 @@ async def get_user_chats(
     }
 
     return Response(status_code=status.HTTP_200_OK, content=json.dumps(data))
-
-
-@router.websocket("/ws/connect/{chat_id}")
-async def start_connection(
-        websocket: WebSocket,
-        current_user: Annotated[User, Depends(get_current_active_user)],
-        chat_id: str,
-        chat_type: str,
-):
-    username = current_user["username"]
-    await manager.connect(username, websocket)
-
-    chat_room = db.find_one(f"{chat_type}_chats", {"_id": chat_id})
-    if not chat_room:
-        await manager.disconnect(username)
-        return
-
-    try:
-        while True:
-            data = json.load(await websocket.receive_json())
-            """
-            data: {
-                caption: string
-                attachments: list[(file_url, type)] | None
-            }
-            """
-
-            if not ("caption" in data and "attachments" in data):
-                raise WebSocketException(4001, reason="invalid data")
-
-            caption = data["caption"]
-            attachments = [Attachment(type=attachment["type"], file=attachment["file"])
-                           for attachment in data["attachments"]]
-            message = Message(
-                sender_id=current_user["username"],
-                caption=caption,
-                attachments=attachments,
-            ).dict()
-
-            db.update_one(f"{chat_type}_chats", {"_id": chat_id}, "push", {"messages": message})
-
-            receivers = chat_room["members"] if chat_type == "group" else chat_room["user_ids"]
-            await manager.send_message(message, receivers, chat_id)
-
-    except WebSocketDisconnect:
-        await manager.disconnect(username)

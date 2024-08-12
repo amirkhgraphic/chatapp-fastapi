@@ -6,7 +6,6 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from database import get_db
 from models.auth import User, UserDB, UserRegistration, Token
-from serializers.auth import userdb_serializer
 from utils.jwt import authenticate_user, ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token, get_user_by_username, \
     get_user_by_email, get_password_hash, get_current_user, get_current_active_user
 
@@ -62,9 +61,7 @@ async def register_user(user: UserRegistration) -> dict:
         email=user.email,
         password=hashed_password,
     )
-
-    user = userdb_serializer(new_user)
-    db.insert_one("users", user)
+    db.insert_one("users", new_user.dict())
 
     return user
 
